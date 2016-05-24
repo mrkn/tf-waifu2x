@@ -1,0 +1,3 @@
+[submodule "waifu2x"]
+	path = waifu2x
+	url = git@github.com:nagadomi/waifu2x.git
