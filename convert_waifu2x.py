@@ -9,6 +9,7 @@ import numpy as np
 top_dir = os.path.normpath(os.path.join(__file__, '..'))
 waifu2x_dir = os.path.join(top_dir, 'waifu2x')
 model_file = os.path.join(waifu2x_dir, 'models/anime_style_art_rgb/scale2.0x_model.json')
+#model_file = os.path.join(waifu2x_dir, 'models/photo/scale2.0x_model.json')
 
 def conv2d(x, params, name=None):
     in_channels = params['nInputPlane']
@@ -21,13 +22,13 @@ def conv2d(x, params, name=None):
     W = tf.constant(W_data, name="W_{}".format(name))
     b = tf.constant(b_data, name="b_{}".format(name))
 
-    conv = tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding='SAME', name=name)
-    y = tf.nn.bias_add(conv, b, name="bias_{}".format(name))
-
-    return y
+    #padding = 'VALID'
+    padding = 'SAME'
+    conv = tf.nn.conv2d(x, W, strides=[1, 1, 1, 1], padding=padding, name=name)
+    return tf.nn.bias_add(conv, b, name="out_{}".format(name))
 
 def leaky_relu(x, alpha, name=None):
-    return tf.maximum(x, alpha * x, name=name)
+    return tf.maximum(x, tf.scalar_mul(alpha, x), name=name)
 
 def convert_model(out_dir):
     with open(model_file) as fp:
@@ -35,14 +36,14 @@ def convert_model(out_dir):
 
     g = tf.Graph()
     with g.as_default():
-        x = tf.placeholder("float", shape=[1, 128, 128, 3])
-        h = x
+        h = x = tf.placeholder("float", shape=[1, 128, 128, 3], name="x")
         steps = len(model_params)
         for i, layer_params in enumerate(model_params):
-            h = conv2d(h, layer_params, name="conv{}".format(i + 1))
-            if i < steps:
-                h = leaky_relu(h, 0.1)
-        y = h
+            name = "conv{}".format(i + 1)
+            print(name)
+            h = conv2d(h, layer_params, name=name)
+            if i < steps - 1:
+                h = leaky_relu(h, 0.2, name="leaky_relu_{}".format(name))
 
         session = tf.Session()
         init = tf.initialize_all_variables()
